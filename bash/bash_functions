@@ -5,3 +5,26 @@ md () { mkdir -p "$@" && cd "$_"; }
 pidof_egrep () { ps acx | egrep -i $@ | awk '{print $1}'; }
 
 pidof_haxo () { ps haxo comm,pid | awk "\$1 ~ /$@/ { print \$2 }" ; }
+
+#restart stunnel conf
+stu_restart() {
+    NOM=${1%.*}
+    OLD_STU_PID=$(cat /var/run/stunnel4/$NOM.pid)
+    echo -n "$NOM old_pid=$OLD_STU_PID "
+    kill -9 $OLD_STU_PID
+    /usr/bin/stunnel4 /etc/stunnel/$1
+    NEW_STU_PID=$(cat /var/run/stunnel4/$NOM.pid)
+    echo "new_pid=$NEW_STU_PID"
+}
+
+#get iso notAfter date
+ssl_iso_enddate() {
+	openssl x509 -in $1 -enddate -noout|sed "s/.*notAfter=//"|xargs -i date -d "{}" "+%Y-%m-%d"
+}
+
+# test stunnel conf with openssl
+stu_conf_test() {
+	OPS_PARAMS=`cat $1|grep -E "(\bconnect\b|\bcert\b|\bkey\b|\bcafile\b)"|sed "s/\bcafile\b/CAfile/" |sed "s/^/-/"|sed "s/\s*=\s*/ /"|tr "\n" " "`
+	echo "openssl s_client -quiet $OPS_PARAMS"
+	openssl s_client $OPS_PARAMS
+}
